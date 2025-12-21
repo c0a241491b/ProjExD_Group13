@@ -1,11 +1,13 @@
 import pygame
 import sys
 import random
+import os
 
 # --- 設定 ---
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 FPS = 60
+TILE_SIZE = 64 # タイルサイズ
 
 # 色定義
 WHITE = (255, 255, 255)
@@ -19,6 +21,14 @@ CYAN = (0, 255, 255)    # MP
 FLASH_COLOR = (255, 255, 255) # ダメージ時の閃光
 GOLD = (255, 223, 0)    # レベルアップ用
 
+COLORS = {
+    0: (50, 180, 50), # 草
+    1: (160, 130, 80), # 土
+    2: (100, 100, 100), # 岩
+    3: (200, 50, 50), # 火
+    4: (0, 0, 255) # 水
+}
+
 # 状態定数
 STATE_MAP = "MAP"
 STATE_BATTLE = "BATTLE"
@@ -27,8 +37,32 @@ STATE_GAME_OVER = "GAME_OVER"
 
 # マップID
 MAP_VILLAGE = 0
-MAP_FIELD = 1
+MAP_FIELD_ID = 1
 MAP_CAMPUS = 2
+
+MAP_FIELD = [
+    [0,0,0,0,0,0,0,0,0,0,0,0,4,4,4,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,4,4,4,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,0,4,4,4,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,4,4,4,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,0,4,4,4,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,2,4,4,4,0,0,0,0,0,0,0,0,0,0,0],
+    [1,1,1,1,1,1,1,1,0,0,0,4,4,4,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,2,0,0,0,0,0,0,4,4,4,1,1,1,1,1,1,1,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,0,4,4,4,0,0,0,0,0,0,1,1,1,1,1,1],
+    [0,0,0,0,0,0,0,0,0,4,4,4,0,0,0,0,3,3,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,4,4,4,0,0,0,0,3,3,3,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,0,4,4,4,0,0,0,3,3,3,3,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,4,4,4,0,0,0,0,0,3,3,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+]
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__)) # 現在のディレクトリ
 
 class Game:
     def __init__(self):
@@ -64,6 +98,8 @@ class Game:
         self.enemies = []
         self.battle_logs = []
 
+        self.map_field = MapField(self.screen)
+
     def get_japanese_font(self, size):
         font_names = ["meiryo", "msgothic", "yugothic", "hiraginosans", "notosanscjkjp"]
         available_fonts = pygame.font.get_fonts()
@@ -75,6 +111,7 @@ class Game:
     def run(self):
         while True:
             self.handle_events()
+            result = self.map_field.update()
             self.update()
             self.draw()
             self.clock.tick(FPS)
@@ -150,8 +187,9 @@ class Game:
                 moved = True
 
             self.check_map_transition()
-            if moved and self.current_map == MAP_FIELD:
+            if moved and self.current_map == MAP_FIELD_ID:
                 self.check_random_encounter()
+
             
             if self.current_map == MAP_CAMPUS and self.player_pos[0] > 700:
                 self.start_battle(is_boss=True)
@@ -308,6 +346,9 @@ class Game:
     def draw(self):
         self.screen.fill(BLACK)
 
+        if self.current_map == MAP_FIELD_ID:
+            self.map_field.draw(self.player_pos)
+
         if self.state == STATE_MAP:
             color = GREEN
             if self.current_map == MAP_VILLAGE: color = (100, 200, 100)
@@ -387,6 +428,133 @@ class Game:
             self.screen.blit(msg, (300, 300))
 
         pygame.display.flip()
+
+
+
+def check_move(player_x, player_y):
+    """
+    もしプレイヤーがx=24,y=9にいるなら次のワールドに移動する指示を返す
+    引数:
+        player_x: プレイヤーのX座標
+        player_y: プレイヤーのY座標
+    戻り値:
+        True または None
+    """
+    if player_x == 24 and player_y == 9:
+        return True
+    return None
+
+def load_image(path): # 画像読み込み
+    """
+    指定されたパスから画像を読み込む関数
+    引数:
+        path: 画像ファイルのパス
+    戻り値:
+        読み込んだ画像オブジェクト または None
+    """
+    full = os.path.join(BASE_DIR, path) # フルパス取得
+    if os.path.exists(full): # ファイル存在確認
+        return pygame.image.load(full).convert_alpha() # 画像読み込み
+    return None # 画像なし
+
+
+class MapField: # フィールド画面クラス
+    def __init__(self, screen): # 初期化
+        self.screen = screen # 画面情報
+        self.map_data = MAP_FIELD # マップデータ
+
+        self.player_x = 1 # プレイヤー座標
+        self.player_y = 1 # プレイヤー座標
+
+        self.move_cool = 0 # 移動クールタイム
+
+        self.tile_images = self.load_tiles() # タイル画像読み込み
+        self.player_img_flont = load_image("fig/map_mahou_1.png") # プレイヤー画像読み込み
+        self.player_img_back = load_image("fig/map_mahou_b_1.png") # プレイヤー画像読み込み
+        self.player_img_right = load_image("fig/map_mahou_r_1.png") # プレイヤー画像読み込み
+        self.player_img_left = load_image("fig/map_mahou_l_1.png") # プレイヤー画像読み込み
+        self.player_img = self.player_img_flont # 初期プレイヤー画像
+
+    def load_tiles(self): # タイル画像読み込み
+        tiles = {} # タイル画像辞書
+        tiles[0] = load_image("fig/grass.png") # 草タイル
+        tiles[1] = load_image("fig/load_1.png") # 土タイル
+        tiles[2] = load_image("fig/stone.png") # 岩タイル
+        tiles[3] = load_image("fig/flower.png") # 花タイル
+        tiles[4] = load_image("fig/river_1.png") # 水タイル
+        tiles[5] = load_image("fig/tree.png") # 木タイル
+        return tiles # タイル画像辞書返却
+
+    def update(self): # 更新処理
+        if self.move_cool > 0: # 移動クールタイム中
+            self.move_cool -= 1 # クールタイム減少
+            return
+
+        keys = pygame.key.get_pressed() # キー取得
+        dx, dy = 0, 0 # 移動量初期化
+        # dx : x方向移動量
+        # dy : y方向移動量
+
+        if keys[pygame.K_LEFT]: 
+            dx = -1 # 左移動
+            self.player_img = self.player_img_left
+        elif keys[pygame.K_RIGHT]: 
+            dx = 1 # 右移動
+            self.player_img = self.player_img_right
+        elif keys[pygame.K_UP]: 
+            dy = -1 # 上移動
+            self.player_img = self.player_img_back
+        elif keys[pygame.K_DOWN]: 
+            dy = 1 # 下移動
+            self.player_img = self.player_img_flont
+
+        if dx or dy: # 移動がある場合
+            nx = self.player_x + dx # 新しいX座標
+            ny = self.player_y + dy # 新しいY座標
+            #self.map_data : マップデータ参照(MAP_FIELD)
+            if 0 <= ny < len(self.map_data) and 0 <= nx < len(self.map_data[0]): # 範囲内確認
+                if self.map_data[ny][nx] in [0, 1]: # 移動可能タイル確認
+                    self.player_x = nx # プレイヤーX座標更新
+                    self.player_y = ny # プレイヤーY座標更新
+                    self.move_cool = 8 # 移動クールタイム設定
+
+    def draw(self): # 描画処理
+        # カメラ位置計算
+        map_width = len(self.map_data[0]) * TILE_SIZE # マップ幅
+        map_height = len(self.map_data) * TILE_SIZE # マップ高さ
+
+        camera_x = self.player_x * TILE_SIZE - SCREEN_WIDTH // 2 # カメラX座標
+        camera_y = self.player_y * TILE_SIZE - SCREEN_HEIGHT // 2 # カメラY座標
+        print(camera_x, camera_y)
+
+        #camera_x = max(0, min(camera_x, map_width - SCREEN_WIDTH)) # カメラX座標調整
+        #camera_y = max(0, min(camera_y, map_height - SCREEN_HEIGHT)) # カメラY座標調整
+
+        # マップ描画
+        for y, row in enumerate(self.map_data): # マップデータ走査
+            for x, tile in enumerate(row): # 各タイル走査
+                px = x * TILE_SIZE - camera_x # 画面X座標
+                py = y * TILE_SIZE - camera_y # 画面Y座標
+                if -TILE_SIZE < px < SCREEN_WIDTH and -TILE_SIZE < py < SCREEN_HEIGHT: # 画面内確認
+                    img = self.tile_images.get(tile) # タイル画像取得
+                    if img: # 画像がある場合
+                        img = pygame.transform.scale(img, (TILE_SIZE, TILE_SIZE)) # 画像サイズ変更
+                        self.screen.blit(img, (px, py)) # 画像描画
+                    else: # 画像がない場合
+                        pygame.draw.rect( # 四角形描画
+                            self.screen, # 画面
+                            COLORS[tile],  # 色
+                            (px, py, TILE_SIZE, TILE_SIZE) # 位置とサイズ
+                        )
+
+        px = self.player_x * TILE_SIZE - camera_x # プレイヤー画面X座標
+        py = self.player_y * TILE_SIZE - camera_y # プレイヤー画面Y座標
+        if self.player_img: # プレイヤー画像がある場合
+            img = pygame.transform.scale(self.player_img, (TILE_SIZE, TILE_SIZE)) # 画像サイズ変更
+            self.screen.blit(img, (px, py)) # プレイヤー描画
+        else: # プレイヤー画像がない場合
+            pygame.draw.rect(self.screen, (255, 0, 0), (px, py, TILE_SIZE, TILE_SIZE)) # 赤四角描画
+
 
 if __name__ == "__main__":
     game = Game()
