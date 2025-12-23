@@ -68,6 +68,11 @@ def load_image(path): # 画像読み込み
 
 class MapField: # フィールド画面クラス
     def __init__(self, screen): # 初期化
+        """
+        __init__ の Docstring
+        :param self: 説明
+        :param screen: 説明
+        """
         self.screen = screen # 画面情報
         self.map_data = MAP_FIELD # マップデータ
 
@@ -85,6 +90,10 @@ class MapField: # フィールド画面クラス
         self.player_img = self.player_img_flont # 初期画像
 
     def load_tiles(self): # タイル画像読み込み
+        """
+        load_tiles の Docstring
+        :param self: 説明
+        """
         tiles = {} # タイル画像辞書
         tiles[0] = load_image("fig/grass.png") # 草タイル
         tiles[1] = load_image("fig/load_1.png") # 土タイル
@@ -95,6 +104,11 @@ class MapField: # フィールド画面クラス
         return tiles # タイル画像辞書返却
 
     def update(self): # 更新処理
+        """
+        update の Docstring
+        
+        :param self: 説明
+        """
         if self.move_cool > 0: # 移動クールタイム中
             self.move_cool -= 1 # クールタイム減少
             return
@@ -130,6 +144,11 @@ class MapField: # フィールド画面クラス
         # print(self.player_x, self.player_y) # デバッグ用座標表示
 
     def draw(self): # 描画処理
+        """
+        draw の Docstring
+        
+        :param self: 説明
+        """
         # カメラ位置計算
         map_width = len(self.map_data[0]) * TILE_SIZE # マップ幅
         map_height = len(self.map_data) * TILE_SIZE # マップ高さ
