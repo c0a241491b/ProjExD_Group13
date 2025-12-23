@@ -1,6 +1,9 @@
 import pygame
 import sys
 import random
+import os # C0A24265
+
+import  MapField # ファイル読み込み C0A24265
 
 # --- 設定 ---
 # 画面サイズとフレームレート（1秒間の描画回数）
@@ -49,6 +52,8 @@ STATE_GAME_OVER = "GAME_OVER" # ゲームオーバー画面
 MAP_VILLAGE = 0 # 最初の村（安全地帯）
 MAP_FIELD = 1   # フィールド（敵が出現）
 MAP_CAMPUS = 2  # キャンパス（ボスが出現）
+
+os.chdir(os.path.dirname(os.path.abspath(__file__))) # カレントディレクトリをこのファイルの場所に変更 C0A24265
 
 class Game:
     def __init__(self):
@@ -112,6 +117,8 @@ class Game:
         # 戦闘用変数（敵リスト、ログ保存用）
         self.enemies = []
         self.battle_logs = []
+
+        self.map_field = MapField.MapField(self.screen) # フィールド画面クラス C0A24265
 
     def get_japanese_font(self, size):
         """
@@ -244,7 +251,6 @@ class Game:
                         else:
                             self.battle_sub_message = "防御力アップがありません！"
                 elif self.state == STATE_ENDING:
-                    if event.key == pygame.K_a:
                     if event.key == pygame.K_a:      # Aキー：攻撃
                         self.execute_turn("ATTACK")
                     elif event.key == pygame.K_m:    # Mキー：魔法
@@ -329,6 +335,42 @@ class Game:
             # キャンパス（MAP_CAMPUS）の奥まで進んだらボス戦開始
             if self.current_map == MAP_CAMPUS and self.player_pos[0] > 700:
                 self.start_battle(is_boss=True)
+            # フィールドマップは MapField 側に処理を委譲 C0A24265
+            if self.current_map == MAP_FIELD: # フィールドマップ処理委譲 C0A24265
+                self.map_field.update() # フィールド画面更新委譲 C0A24265
+
+                # MapField 側で移動があった直後は move_cool を設定するので遭遇判定を呼ぶ
+                if getattr(self.map_field, "move_cool", 0) == 8: # フィールド遭遇判定委譲 C0A24265
+                    self.check_random_encounter() # フィールド遭遇判定委譲 C0A24265
+
+                # MapField 側で次マップへ移動する指示が出ているか確認 C0A24265
+                if MapField.check_move(self.map_field): # フィールドマップ移動判定委譲 C0A24265
+                    if self.current_map < MAP_CAMPUS: # フィールドマップ移動処理委譲 C0A24265
+                        self.current_map = MAP_CAMPUS # フィールドマップ移動処理委譲 C0A24265
+                    self.player_pos[0] = 10 # フィールドマップ移動処理委譲 C0A24265
+            else:
+                keys = pygame.key.get_pressed()
+                moved = False
+                
+                if keys[pygame.K_LEFT]:
+                    self.player_pos[0] -= self.speed
+                    moved = True
+                if keys[pygame.K_RIGHT]:
+                    self.player_pos[0] += self.speed
+                    moved = True
+                if keys[pygame.K_UP]:
+                    self.player_pos[1] -= self.speed
+                    moved = True
+                if keys[pygame.K_DOWN]:
+                    self.player_pos[1] += self.speed
+                    moved = True
+
+                self.check_map_transition()
+                if moved and self.current_map == MAP_FIELD:
+                    self.check_random_encounter()
+                
+                if self.current_map == MAP_CAMPUS and self.player_pos[0] > 700:
+                    self.start_battle(is_boss=True)
 
     def gain_exp(self, amount):
         """
@@ -608,6 +650,8 @@ class Game:
             
             # プレイヤーの描画
             pygame.draw.rect(self.screen, RED, (*self.player_pos, self.player_size, self.player_size))
+            if self.current_map == MAP_FIELD: # フィールドマップ描画委譲 C0A24265
+                self.map_field.draw() # フィールド画面描画委譲 C0A24265
             
             # 簡易ステータス表示
             status_str = f"Lv:{self.player_level}  HP:{self.player_hp}/{self.player_max_hp}"
