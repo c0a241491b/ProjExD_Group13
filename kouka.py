@@ -336,7 +336,7 @@ class Game:
             enemy_types = [
                 {"name":"小テスト","hp":30,"max_hp":30,"atk":5,"xp":20,"color":GREEN},
                 {"name":"中間レポート","hp":70,"max_hp":70,"atk":10,"xp":50,"color":BLUE},
-                {"name":"期末試験","hp":100,"max_hp":100,"atk":15,"xp":70,"color": RED},
+                {"name":"中間試験","hp":100,"max_hp":100,"atk":15,"xp":70,"color": RED},
             ]
             for i in range(num):
                 x_pos = 150 + i * 180
@@ -349,7 +349,7 @@ class Game:
                     "atk": enemy_temp['atk'],
                     "xp": enemy_temp['xp'],
                     "color":enemy_temp['color'],
-                    "rect": pygame.Rect(x_pos, 100, 100, 100),
+                    "rect": pygame.Rect(x_pos, 120, 120, 120),
                     "flash_timer": 0,
                     "img": img
                 })
