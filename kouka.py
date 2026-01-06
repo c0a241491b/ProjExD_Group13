@@ -322,9 +322,9 @@ class Game:
         if is_boss:
             self.enemies.append({
                 "name": "悪の組織",
-                "hp": 1000, 
-                "max_hp": 1000,
-                "atk": 35,
+                "hp": 400, 
+                "max_hp": 400,
+                "atk": 25,
                 "xp": 5000,
                 "color": YELLOW, 
                 "rect": pygame.Rect(300, 50, 200, 200),
@@ -357,7 +357,7 @@ class Game:
     def execute_turn(self, action_type):
         self.battle_logs = [] 
         valid_targets = [e for e in self.enemies if e["hp"] > 0]
-        if not valid_targets and len(self.enemies) == 0:  # 生きている敵がいない場合はなにもしない
+        if not valid_targets:  # 生きている敵がいない場合はなにもしない
             return
         
         level_bonus = (self.player_level - 1) * 2
